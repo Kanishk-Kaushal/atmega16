@@ -1,0 +1,29 @@
+#include <avr/io.h>
+#include <util/delay.h>
+unsigned int p=0;
+unsigned int ps=0;
+unsigned int s;
+unsigned int p1;
+
+int main(void)
+{
+	DDRA |= (1<<DDA0);
+	DDRC &= ~(1<<DDC0);
+	PORTA &= ~(1<<PA0);
+	
+	while (1)
+	{     s=(PINC & (1<<PINC0));
+		  if(s!=ps)
+		  {
+			  if(s==1)
+			   p++;
+			   _delay_ms(50);
+		  }
+		  ps=s;
+		  p1=(p%2);
+		if(p1==1)
+		PORTA |= (1<<PA0);
+		else
+		PORTA &= ~(1<<PA0);
+	}
+}
