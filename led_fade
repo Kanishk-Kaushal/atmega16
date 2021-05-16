@@ -1,0 +1,39 @@
+#include <avr/io.h>
+#include <util/delay.h>
+unsigned int i;
+
+int main(void)
+{   
+	TCCR1B &= ~(1<<WGM13);
+	TCCR1B |= (1<<WGM12);
+	TCCR1A |= (1<<WGM10);
+	TCCR1A &= ~(1<<WGM11);
+
+	TCCR1A &= ~(1<<COM1A0);
+	TCCR1A |= (1<<COM1A1);
+	
+	TCCR1B |= (1<<CS11) | (1<<CS10);
+	TCCR1B &= ~(1<<CS12);
+	
+	DDRD |=(1<<DDD5);
+	
+
+    
+    while (1) 
+    {
+		for(i=0;i<255;i++)
+		{
+		   OCR1A = i; 
+		   _delay_ms(5);
+		}
+		_delay_ms(50);
+		
+		for(i=255;i>1;i--)
+		{
+			OCR1A=i;
+			_delay_ms(5);
+			
+		}
+		_delay_ms(50);
+    }
+}
