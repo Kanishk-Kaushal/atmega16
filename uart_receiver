@@ -1,0 +1,30 @@
+#include <avr/io.h>
+
+void USART_Init(void)
+{
+	UBRRL=6;
+	UCSRB |=(1<<TXEN) | (1<<RXEN);
+	UCSRC |=(1<<URSEL) | (1<<UCSZ1) | (1<<UCSZ0);
+
+}
+unsigned char USART_Recieve( void )
+{
+	while(!(UCSRA & (1<<RXC)));
+	return UDR;
+}
+
+
+int main(void)
+{
+	DDRD = ~(1 << PIND0);
+	DDRC =(1<<PORTC0);
+	USART_Init();
+	int val=USART_Recieve();
+	while (1)
+	{
+		if(val=='N')
+		PORTC=(1<<PORTC0);
+		else
+		PORTC &=~(1<<PORTC0);
+	}
+}
