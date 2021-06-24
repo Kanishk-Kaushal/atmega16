@@ -1,0 +1,57 @@
+#define F_CPU 1000000UL
+#include <avr/io.h>
+#include <util/delay.h>
+#include <math.h>
+#include <stdlib.h>
+#include <avr/interrupt.h>
+void UART_Init(void)
+{
+	unsigned int ubrr = 25;
+	UBRRH = (unsigned char)(ubrr>>8);
+	UBRRL = (unsigned char)ubrr;
+	UCSRB |=(1<<TXEN);
+	UCSRC = (1<<URSEL)|(1<<USBS)|(3<<UCSZ0);
+}
+
+void UART_Transmit(unsigned char data)
+{
+	//wait for empty transmit buffer
+	while(!(UCSRA & (1<<UDRE)));
+	UDR = data;
+}
+
+int main(void)
+{
+	UART_Init();
+	DDRA = 0b00000000;
+	ADMUX = (1<<REFS0);
+	ADCSRA = (1<<ADEN)|(1<<ADPS1) |(1<<ADPS0); 
+	ADMUX &=~(1<<ADLAR);
+	ADCSRA |=1<<ADIE;
+	ADCSRA |=1<<ADSC;
+	int x=0,y=0,x2=0,y2=0;
+	
+	while(1)
+	{
+		uint8_t low = ADCL;
+		uint16_t high = ADCH<<8 | low;
+		switch (ADMUX)
+		{
+			case 0b01000000:
+			x = (high | 0b00000001);
+			x2 = high>>8;
+			UART_Transmit(x);
+			UART_Transmit(x2);
+			ADMUX = 0b01000001;
+			break;
+			case 0b01000001:
+		    y = (high & 0b11111110);		
+			y2 = high>>8;
+			UART_Transmit(y);
+			UART_Transmit(y2);
+			ADMUX = 0b01000000;
+			break;
+		}
+		ADCSRA |= 1<<ADSC;
+	}
+}
