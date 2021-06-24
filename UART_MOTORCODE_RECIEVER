@@ -1,0 +1,201 @@
+#include <avr/io.h>
+#include <math.h>
+#include <stdlib.h>
+long map(long a, long in_min, long in_max, long out_min, long out_max)
+{
+	return (((a - in_min) * (out_max - out_min))/((in_max - in_min) + out_min));
+}
+void UART_Init(void)
+{
+	
+	unsigned int ubrr = 25;
+	UBRRH = (unsigned char)(ubrr>>8);
+	UBRRL = (unsigned char)ubrr;
+	UCSRB |=(1<<RXEN);
+	UCSRC = (1<<URSEL)|(1<<USBS)|(3<<UCSZ0);
+}
+
+void pwm_set()
+{
+	TCCR0 |= (1<<WGM00) |(1<<WGM01); 
+	TCCR0 |= (1<<COM01) |(1<<CS00);  
+	TCCR2 |= (1<<WGM20) |(1<<WGM21); 
+	TCCR2 |= (1<<COM21) |(1<<CS20);  
+
+}
+
+unsigned char UART_Receive(void)
+{
+	//Wait for data to be received
+	while(!(UCSRA & (1<<RXC)));
+	return UDR;
+}
+
+int x=0,y=0;
+int xval=0,yval=0;
+int pwm_R;
+int pwm_L;
+int y_map;
+int x_map;
+int main(void)
+{
+	DDRB |=(1<<PINB1) |(1<<PINB0);
+	DDRB |= 1<<PINB3;
+	DDRD |= 1<<PIND7;
+	UART_Init();
+	pwm_set();
+	PORTB |=(1<<PINB0) |(1<<PINB1);
+	uint16_t val=0;
+	int low=0,high=0;
+	while(1)
+	{
+		
+		low = UART_Receive();
+		high = UART_Receive();
+		val = (high<<8 | low);
+		if((val & 0b00000001) == 0b00000001)
+		{
+			x = val;
+		}
+		else if((val & 0b00000000) == 0b00000000)
+		{	
+			y = val;
+		}
+//buffer
+if(y>500 && y<=600)
+{y=512;}
+if(x>500 && x<=650)
+{x=512;}
+
+// DIRECTION :
+if(y<512 && x==512)
+{
+
+	PORTB |= (1<<PINB0);
+	PORTB |= (1<<PINB1);
+}
+else if(y>=512 && x==512)
+{
+
+	PORTB &= ~(1<<PINB0);
+	PORTB &= ~(1<<PINB1);
+}
+else if(x>512)
+{
+
+	PORTB &= ~(1<<PINB0);
+	PORTB |= (1<<PINB1);
+}
+else
+{
+
+	PORTB |= (1<<PINB0);
+	PORTB &= ~(1<<PINB1);
+}
+
+// SPEED :
+if(y<=512 && x>=512)
+{
+	y_map=map(y,512,0,0,255);
+	x_map=map(x,512,1023,0,255);
+	if(y_map-x_map<=0)
+	{
+
+		pwm_R=x_map-y_map;
+		pwm_L=x_map+y_map;
+		if(pwm_R>255)
+		pwm_R=255;
+		if(pwm_L<0)
+		pwm_L=0;
+	}
+	else
+	{
+		pwm_R=y_map-x_map;
+		pwm_L=y_map+x_map;
+		if(pwm_L>255)
+		{pwm_L=255;}
+		if(pwm_R<0)
+		{pwm_R=0;}
+	}
+}
+else if(y<512 && x<512)
+{
+	y_map=map(y,512,0,0,255);
+	x_map=map(x,512,0,0,255);
+	if(y_map-x_map>0)
+	{
+		pwm_R=y_map+x_map;
+		pwm_L=y_map-x_map;
+		if(pwm_L>255)
+		{pwm_L=255;}
+		if(pwm_R<0)
+		{pwm_R=0;}
+
+	}
+	else
+	{
+		pwm_R=x_map+y_map;
+		pwm_L=x_map-y_map;
+		if(pwm_R>255)
+		{pwm_R=255;}
+		if(pwm_L<0)
+		{pwm_L=0;}
+
+	}
+}
+else if(y>512 && x<512)
+{
+	y_map=map(y,512,1023,0,255);
+	x_map=map(x,512,0,0,255);
+	if(y_map-x_map<0)
+	{
+		pwm_R=x_map-y_map;
+		pwm_L=x_map+y_map;
+		if(pwm_L>255)
+		{pwm_L=255;}
+		if(pwm_R<0)
+		{pwm_R=0;}
+
+	}
+	else
+	{
+		pwm_R=y_map-x_map;
+		pwm_L=y_map+x_map;
+		if(pwm_L>255)
+		{pwm_L=255;}
+		if(pwm_R<0)
+		{pwm_R=0;}
+
+	}
+}
+else
+{
+	y_map=map(y,512,1023,0,255);
+	x_map=map(x,512,1023,0,255);
+	if(y_map-x_map>0)
+	{
+		pwm_R=y_map+x_map;
+		pwm_L=y_map-x_map;
+		if(pwm_L>255)
+		{pwm_L=255;}
+		if(pwm_R<0)
+		{pwm_R=0;}
+
+	}
+	else
+	{
+		pwm_R=x_map+y_map;
+		pwm_L=x_map-y_map;
+		if(pwm_L>255)
+		pwm_L=255;
+		if(pwm_R<0)
+		pwm_R=0;
+
+	}
+}
+	
+OCR2 = pwm_L;
+OCR0 = pwm_R;
+ADCSRA |= 1<<ADSC;
+}
+}
