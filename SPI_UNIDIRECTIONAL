@@ -1,0 +1,79 @@
+//master
+#define F_CPU 16000000UL
+#include <avr/io.h>
+#include <util/delay.h>
+#include <stdio.h>
+#define miso PINB6
+#define mosi PINB5
+#define  ss PINB4
+#define sck PINB7
+void spi_init()
+{
+  DDRB |= (1<<mosi)|(1<<sck)|(1<<ss); //make mosi,miso and ss as output pin
+  DDRB &= (~(1<<miso));// make miso output
+  SPCR = (1<<SPE)|(1<<MSTR)|(1<<SPR0);//spi in master mode with fosc/16
+  SPSR &= (~(1<<SPI2X));//disable speed doubler
+ 
+}
+void spi_write(unsigned char data)
+{
+	
+	SPDR=data;//write data to spi register
+	while(!(SPSR & (1<<SPIF)));//wait till transmission is complete
+
+}
+
+int main(void)
+{
+    spi_init();
+	DDRA &= (~(1<<PINA0));
+    while (1) 
+    {
+		if(PINA & (1<<PINA0))
+		spi_write(0b11110000);
+		else
+		spi_write(0b00000000);
+		_delay_ms(500);
+		  
+    }
+}
+
+//slave
+
+#define F_CPU 16000000
+#include <avr/io.h>
+#include <util/delay.h>
+#include <stdio.h>
+#define mosi PINB5
+#define miso PINB6
+#define sck PINB7
+#define ss PINB4
+void spi_init()
+{
+	DDRC=0xFF;
+	DDRB |= (1<<miso);
+	SPCR = (1<<SPE);
+}
+
+unsigned char spi_read()
+{
+	while(!(SPSR & (1<<SPIF)));	
+	return(SPDR);
+}
+
+int main(void)
+{
+	unsigned char x;
+    spi_init();
+	DDRC |= (1<<PINC0);
+    while (1) 
+    { 
+		x=spi_read();
+		if(x==0b11110000)
+		PORTC |=(1<<PORTC0);
+		else
+		PORTC &=~(1<<PORTC0);
+		
+    }
+}
+
