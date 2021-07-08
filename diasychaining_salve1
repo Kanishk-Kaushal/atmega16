@@ -1,0 +1,105 @@
+#define F_CPU 1000000UL
+#include <avr/io.h>
+#include <util/delay.h>
+
+//DEFINE SPI PINS
+
+#define SS PINB4
+#define MOSI PINB5
+#define MISO PINB6
+#define SCK PINB7
+void blink3()
+{
+	PORTC |=(1<<PORTC0);
+	_delay_ms(100);
+	PORTC &=~(1<<PORTC0);
+	_delay_ms(100);
+	PORTC |=(1<<PORTC0);
+	_delay_ms(100);
+	PORTC &=~(1<<PORTC0);
+	_delay_ms(100);
+	PORTC |=(1<<PORTC0);
+	_delay_ms(100);
+	PORTC &=~(1<<PORTC0);
+	_delay_ms(100);
+}
+void blink1()
+{
+	PORTC |=(1<<PORTC0);
+	_delay_ms(500);
+	PORTC &=~(1<<PORTC0);
+	_delay_ms(500);
+}
+
+void Slave_SPI_Init()
+{
+	// MISO -> OUTPUT
+	DDRB |= (1<<MISO);
+	DDRB &= ~(1<<MOSI)|(1<<SCK)|(1<<SS);
+	
+	// ENABLE SPI | SLAVE MODE
+	SPCR = (1<<SPE)|(1<<SPR0);
+}
+
+
+
+unsigned char Bidirectional_comm(unsigned char data)
+{
+	SPDR =data;
+	while(!(SPSR & (1<<SPIF)));
+	return SPDR;
+}
+void spi_write(unsigned char data)
+{
+	
+	SPDR=data;//write data to spi register
+	while(!(SPSR & (1<<SPIF)));//wait till transmission is complete
+
+}
+int main(void)
+{
+	Slave_SPI_Init();
+	
+	// PUSHBUTTON
+	DDRB &= ~(1<<PINB0);
+	
+	// LED
+	DDRC=0xFF;
+	
+	unsigned char RX;
+	unsigned char TX;
+	
+	while (1)
+	{
+		
+		if(PINB & (1<<PINB0)) // IF PINB0 IS SET -> PUSHBUTTON IS PRESSED
+		{
+			blink1();
+			TX=0b10100000;
+		}
+		else
+		{
+			TX=0b00000000;
+		}
+		
+		RX=0x00; // INITALISING RX
+		
+		RX=Bidirectional_comm(TX);
+		
+		if (RX == 0b11110000)
+		{
+			blink3();
+		}
+		else if (RX == 0b00000101)
+		{
+			spi_write(RX);
+		}
+
+		else
+		{
+			PORTC &=~(1<<PORTC0);
+			
+		}
+		
+	}
+}
