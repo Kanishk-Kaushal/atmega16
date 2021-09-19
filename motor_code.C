@@ -123,7 +123,7 @@ int main(void)
 		
 		
 		
-		if(abs(X_val)<50&&abs(Y_val)<50)                    //Buffer around centre
+		if(abs(X_val)<60&&abs(Y_val)<60)                    //Buffer around centre
 		{
 			OCR0 = 0;
 			OCR2 = 0;
